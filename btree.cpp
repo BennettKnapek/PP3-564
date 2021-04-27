@@ -33,6 +33,31 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		const Datatype attrType)
 {
     // Add your code below. Please do not remove this line.
+
+	//Construct index file name
+	//Check if this index file exists
+	//if it does, open it
+	//if it doesn't create new
+
+	std::ostringstream idxStr;
+	idxStr << relationName << '.' << attrByteOffset;
+	std::string indexName = idxStr.str(); //indexName is the name of the index file
+	outIndexName = indexName; //sets the name of the file?
+
+	bool newFile = true;
+	if (BlobFile::exists(outIndexName)) { //check if this file already exists
+		newFile = false;
+	} 
+	this->file = new BlobFile(outIndexName, newFile); //open the file -- unsure about this 
+	this->bufMgr = bufMgrIn;
+	this->attrByteOffset = attrByteOffset;
+	this->attributeType = attrType;
+
+	//Other members that I'm not sure what to do with yet
+	//headerPageNum?
+	//rootPageNum?
+	//leafOccupancy?
+	//nodeOccupancy?
 }
 
 
@@ -64,6 +89,45 @@ void BTreeIndex::startScan(const void* lowValParm,
 				   const Operator highOpParm)
 {
     // Add your code below. Please do not remove this line.
+
+	this->scanExecuting = true;
+
+	//Setup scanning variables
+
+	//Check for proper low operator
+	if (lowOpParm == GT || lowOpParm == GTE) {
+		this->lowOp = lowOpParm;
+	} else {
+		throw BadOpcodesException();
+	}
+
+	//Check for proper high operator
+	if (highOpParm == LT || lowOpParm == LTE) {
+		this->highOp = highOpParm;	
+	} else {
+		throw BadOpcodesException();
+	}
+
+	//Set high/low values
+	if (this->attributeType == INTEGER) {
+		this->lowValInt = *lowValParm;
+		this->highValInt = *highValParm;
+	} else if (this->attributeType == DOUBLE) {
+		this->lowValDouble = *lowValParm;
+		this->highValDouble = *highValParm;
+	} else if (this->attributeType == STRING) {
+		this->lowValString = *lowValString;
+		this->highValString = *highValString;
+	} 
+
+	//Other scanning members im not sure what to do with yet
+	//nextEntry?
+	//currentPageNum?
+	//currentPageData?
+
+	//End scanning variables setup
+
+	//Begin scan
 }
 
 // -----------------------------------------------------------------------------
@@ -82,6 +146,8 @@ void BTreeIndex::scanNext(RecordId& outRid)
 void BTreeIndex::endScan() 
 {
     // Add your code below. Please do not remove this line.
+
+	this->scanExecuting = false;
 }
 
 }

@@ -1,0 +1,61 @@
+CS564 PP3 Design Report
+
+As the time needed and overall difficulty of this project was underestimated by our team, we were unable 
+to fully implement our entire design. We decided to focus on the functions that seemed obtainable to 
+complete before the deadline. The functions that we were able to implement are the constructor, the 
+deconstructor, startScan, and endScan, along with a helper function getNextEntry for startScan. For 
+insertEntry and scanNext, we included a description in this report of our plans for these functions had we 
+alloted enough time, along with details about the functions that we were able to implement.  
+
+Functions implemented:
+
+	Constructor
+
+		The constructor serves multiple purposes. First of all the name of the index file is computed
+		using the code given in the write up. Next, we use the index file name to check if this index file
+		already exists, and if it does not, we create a new file with that index file name. Also, various
+		class members are initialized, some depending on whether a new file has been created. For example,
+		if the file exists, we set the header page number to match the existing, otherwise, those pages are 
+		allocated using the buffer manager. After this step, we make sure to unpin the header and root pages
+		in the buffer manager, as they are no longer needed in memory. Last, we make use of the FileScan 
+		class to make entries into our index, using the code from main.cpp lines 113-128, had we implemented 
+		the insertEntry function.
+
+	Deconstructor
+	
+		In the deconstructor, the scanExecuting variable is set to false, index file is written by calling
+		the buffer manager flush function, and last the BlobFile object is deleted.
+
+	startScan
+
+		In this function, we first make sure that a scan is not already being executed, and if that is the
+		case, the endScan function is called to end that scan. Next, we make sure that the proper operators
+		are given for lowOpParm and highOpParm. If anything besides GT or GTE is given for lowOpParm, or
+		LT or LTE for the highOpParm, a BadOpCodesException is thrown. We then perform a check to make sure
+		that the lowValParm is less than the highValParm, if not, a BadScanrangeException is thrown. Now,
+		if all of the parameters given are valid, the scanExecuting member is set to true, the lowValInt,
+		highValInt, lowOp, and highOp class members are set to the respective parameters. Last, the helper
+		function getNextEntry is called to retrieve the next entry to be scanned.
+
+	endScan
+		
+		To end a scan, we first check if the scanExecuting class member is set to true, and if not, a
+		ScanNotInitialzedException is thrown. Next, we unpin the page that the class member currentPageNum
+		is pointing to, as it is not needed in memory anymore. Last, the scanExecuting class member is set
+		to false.
+
+	getNextEntry
+		
+		NEED TO FINISH THIS ONE STILL. THIS FUNCTION NEEDS TO BE REWORKED IN BTREE AS WELL.
+
+Functions not implemented:
+
+	insertEntry
+		-Would need functions to split both internal and external nodes
+		-Would need functions to insert into internal and external nodes
+		-HERE, WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE.
+
+	scanNext
+		-WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE
+
+

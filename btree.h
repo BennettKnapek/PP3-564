@@ -366,10 +366,6 @@ class BTreeIndex {
 	void endScan();
 	
   int getNextEntry(PageId pageNum);
-  bool insertKeyLeafNode(LeafNodeInt *node, int key, const RecordId rid);
-  bool insertKeyInternalNode(NonLeafNodeInt* node, int key, PageId pageId);
-  PageId splitLeafNode(LeafNodeInt *lastNode, int& key, const RecordId rid);
-  PageId splitInternalNode(NonLeafNodeInt* node, int &key, const PageId pageId);
 };
 
 }

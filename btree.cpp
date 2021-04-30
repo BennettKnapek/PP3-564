@@ -56,7 +56,9 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		this->bufMgr->readPage(file, headerPageNum, headerPage);
 		meta = (IndexMetaInfo*) headerPage;
     	this->rootPageNum = meta->rootPageNo;
-		this->bufMgr->unPinPage(file, headerPageNum, false);
+		try {
+			this->bufMgr->unPinPage(file, headerPageNum, false);
+		} catch(PageNotPinnedException& e){ }
 	} catch (FileNotFoundException& e) {
 		this->file = new BlobFile(outIndexName, true);
 	}
@@ -71,8 +73,10 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 	NonLeafNodeInt* root = (NonLeafNodeInt*) rootPage;
 	root->level = 1;
 
-	this->bufMgr->unPinPage(file, headerPageNum, true);
-	this->bufMgr->unPinPage(file, rootPageNum, true);
+	try {
+		this->bufMgr->unPinPage(file, headerPageNum, true);
+		this->bufMgr->unPinPage(file, rootPageNum, true);
+	} catch(PageNotPinnedException& e){ }
 
 	//This part could be switched up a bit
 	try {
@@ -124,7 +128,9 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 			currentNode->pageNoArray[0] = lastPageId;
 			currentNode->pageNoArray[1] = nextPageId;
 			lastNode->rightSibPageNo = nextPageId;
-	  		this->bufMgr->unPinPage(this->file, lastPageId, true);
+			try {
+	  			this->bufMgr->unPinPage(this->file, lastPageId, true);
+			} catch(PageNotPinnedException& e){ }
 			stack.push(nextPageId);
 		}
 
@@ -142,7 +148,9 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 
 	if (!insertKeyLeafNode(leafNode, currentKey, rid)) {
 		PageId newPageId = splitLeafNode(leafNode, currentKey, rid);
-		this->bufMgr->unPinPage(this->file, stack.top(), true);
+		try{
+			this->bufMgr->unPinPage(this->file, stack.top(), true);
+		} catch(PageNotPinnedException& e){ }
 		stack.pop();
 		PageId currentPageId = stack.top();
 		bufMgr->readPage(file, currentPageId, currentPage);
@@ -165,20 +173,26 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 		if (stack.empty()) {
 			Page* rootPage;
 			PageId rootPageId;
-			this->bufMgr->allocPage(file, rootPageId, rootPage);
+			try {
+				this->bufMgr->allocPage(file, rootPageId, rootPage);
+			} catch(PageNotPinnedException& e){ }
 			NonLeafNodeInt* root = (NonLeafNodeInt*) rootPage;
 			root->level = 0;
 			root->keyArray[0] = currentKey;
 			root->pageNoArray[0] = currentPageId;
 			root->pageNoArray[1] = newPageId;
 			rootPageNum = rootPageId;
-			this->bufMgr->unPinPage(this->file, newPageId, true);
-			this->bufMgr->unPinPage(this->file, rootPageId, true);
+			try {
+				this->bufMgr->unPinPage(this->file, newPageId, true);
+				this->bufMgr->unPinPage(this->file, rootPageId, true);
+			} catch(PageNotPinnedException& e){ }
 		}
 	}
  
 	while (!stack.empty()) {
-		this->bufMgr->unPinPage(this->file, stack.top(), true);
+		try {
+			this->bufMgr->unPinPage(this->file, stack.top(), true);
+		} catch(PageNotPinnedException& e){ }
 		stack.pop();
 	}
 }
@@ -214,7 +228,9 @@ void BTreeIndex::scanNext(RecordId& outRid)
 	while (1) {
 		if (this->nextEntry == INTARRAYLEAFSIZE) {
       		this->nextEntry = 0;
-			this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+			try {
+				this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+			} catch(PageNotPinnedException& e){ }
 			this->currentPageNum = currentNode->rightSibPageNo;
 			this->bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
 			if (!currentNode->rightSibPageNo/* == 0*/) {
@@ -252,7 +268,9 @@ void BTreeIndex::endScan()
 		throw ScanNotInitializedException();
   	}
 	this->scanExecuting = false;
-	this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+	try {
+		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+	} catch(PageNotPinnedException& e){ }
 }
 
 
@@ -270,7 +288,9 @@ int BTreeIndex::getNextEntry(PageId pageNum) {
 	for (; currentNode->pageNoArray[i+1] != 0 && i < INTARRAYNONLEAFSIZE && currentNode->keyArray[i] <= lowValInt; i++);
 
 	if (currentNode->level == 1) {
-		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+		try {
+			this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+		} catch(PageNotPinnedException& e){ }
 		this->currentPageNum = currentNode->pageNoArray[i];
 		bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
 		LeafNodeInt* currentNode = (LeafNodeInt*) this->currentPageData;
@@ -288,7 +308,9 @@ int BTreeIndex::getNextEntry(PageId pageNum) {
 		return j;
 	}
 
-	this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+	try {
+		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+	} catch(PageNotPinnedException& e){ }
 	return getNextEntry(currentNode->pageNoArray[i]);
 }
 
@@ -358,7 +380,9 @@ PageId BTreeIndex::splitLeafNode(LeafNodeInt *lastNode, int& key, const RecordId
 		insertKeyLeafNode(lastNode, key, rid);
   }
 	key = nextNode->keyArray[0];
-	this->bufMgr->unPinPage(this->file, nextPageId, true);
+	try {
+		this->bufMgr->unPinPage(this->file, nextPageId, true);
+	} catch(PageNotPinnedException& e){ }
 	return nextPageId;
 }
 
@@ -409,15 +433,9 @@ PageId BTreeIndex::splitInternalNode(NonLeafNodeInt* node, int &key, const PageI
 
 	newNode->level = node->level;
 	key = keyTempArray[center];
-	this->bufMgr->unPinPage(file, newPageId, true);
+	try {
+		this->bufMgr->unPinPage(file, newPageId, true);
+	} catch(PageNotPinnedException& e){ }
 	return newPageId;
-}
-
-
-// const void BTreeIndex::BufferUnPinPage(const PageId pageNo, const bool dirty) {
-// 	try {
-// 		bufMgr->unPinPage(file, pageNo, dirty);
-// 	} catch (PageNotPinnedException& e) {} catch (HashNotFoundException& e) {}
-// }
-
+	}
 }

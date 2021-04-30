@@ -66,6 +66,13 @@ Functions not implemented:
 	
 	TODO:
 	scanNext
-		-WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE
+		First check if the scanExecuting is set to true and if not throw a ScanNotInitializedException.
+		We will loop through the entries until we have found one that matches the scan. The way we iterate
+		is by moving on to the right sibling of the page if it has been completely scanned. We will make sure
+		to unpin the pages from the buffer that are no longer of use. We will know that we have scanned all of
+		the required records if any page has a right sibling value that indicates the end of the pages. Also,
+		if we reach values that are outside of the highOp and lowOp interval then we will know we are done
+		scanning. Once we have a valid entry we will exit the loop and assign the outRid parameter with the 
+		appropriate value.
 
 

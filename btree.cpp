@@ -86,7 +86,8 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 			fscan.scanNext(rid);
 			std::string recordStr = fscan.getRecord();
 			const char *record = recordStr.c_str();
-			insertEntry((int*)record + attrByteOffset, rid);
+			//call to insertEntry had that function been implemented
+			//insertEntry((int*)record + attrByteOffset, rid);
 		}
 	} catch (EndOfFileException &e) {}
 }
@@ -123,7 +124,8 @@ void BTreeIndex::startScan(const void* lowValParm,
   this->highValInt = *(int*)highValParm;
   this->lowOp = lowOpParm;
   this->highOp = highOpParm;
-  this->nextEntry = getNextEntry(rootPageNum);
+  //call to getNextEntry, had that function been implemented
+  //this->nextEntry = getNextEntry(this->rootPageNum);
 }
 
 void BTreeIndex::scanNext(RecordId& outRid) 
@@ -139,38 +141,5 @@ void BTreeIndex::endScan()
 		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
 	} catch(PageNotPinnedException& e){ }
 	this->scanExecuting = false;
-}
-
-//TODO
-//Maybe convert this into an iterative function
-int BTreeIndex::getNextEntry(PageId pageNum) {
-	this->currentPageNum = pageNum;
-	this->bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
-	NonLeafNodeInt* currentNode = (NonLeafNodeInt*) this->currentPageData;
-	int i;
-	for (i = 0; currentNode->pageNoArray[i+1] != 0 && i < INTARRAYNONLEAFSIZE && currentNode->keyArray[i] <= lowValInt; i++) {
-
-		if (currentNode->level == 1) {
-			try {
-				this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
-			} catch(PageNotPinnedException& e){ }
-			this->currentPageNum = currentNode->pageNoArray[i];
-			bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
-			LeafNodeInt* currentNode = (LeafNodeInt*) this->currentPageData;
-
-			int j;
-			for (j = 0; j <= INTARRAYLEAFSIZE-1; j++) {
-				if (this->lowOp == GT && currentNode->keyArray[j] > this->lowValInt || currentNode->keyArray[j] >= lowValInt) {
-						return j;
-				} 
-			}
-			return j;
-		}
-	}
-
-	try {
-		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
-	} catch(PageNotPinnedException& e){ }
-	return getNextEntry(currentNode->pageNoArray[i]);
 }
 }

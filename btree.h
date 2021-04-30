@@ -365,7 +365,6 @@ class BTreeIndex {
 	**/
 	void endScan();
 	
-  int getNextEntry(PageId pageNum);
 };
 
 }

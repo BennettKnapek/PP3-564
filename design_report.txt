@@ -3,9 +3,9 @@ CS564 PP3 Design Report
 As the time needed and overall difficulty of this project was underestimated by our team, we were unable 
 to fully implement our entire design. We decided to focus on the functions that seemed obtainable to 
 complete before the deadline. The functions that we were able to implement are the constructor, the 
-deconstructor, startScan, and endScan, along with a helper function getNextEntry for startScan. For 
-insertEntry and scanNext, we included a description in this report of our plans for these functions had we 
-alloted enough time, along with details about the functions that we were able to implement.  
+deconstructor, startScan, and endScan. For insertEntry, scanNext, and getNextEntry, which would be used to 
+complete the startScan function, we included a description in this report of our plans for these functions 
+had we alloted enough time, along with details about the functions that we were able to implement.  
 
 Functions implemented:
 
@@ -44,17 +44,27 @@ Functions implemented:
 		is pointing to, as it is not needed in memory anymore. Last, the scanExecuting class member is set
 		to false.
 
+Functions not implemented:
+	
 	getNextEntry
 		
-		NEED TO FINISH THIS ONE STILL. THIS FUNCTION NEEDS TO BE REWORKED IN BTREE AS WELL.
+		In order to complete the startScan function, we needed to implement a helper function that would
+		retrieve the next entry to be scanned. According to our design, this function would be recursive 
+		which would take a PageId as a parameter and return an integer which represents the index of the
+		next entry. This function would iterate through each child of the current node, checking if the
+		current entry maintains the bounds defined by lowOp and highOp, if those bounds are violated, that
+		index is returned. Throughout this process, we would have made sure to unpin each page that was
+		read by the buffer manager after it was no longer needed.
 
-Functions not implemented:
+		Maybe add more here	
 
+	TODO:
 	insertEntry
 		-Would need functions to split both internal and external nodes
 		-Would need functions to insert into internal and external nodes
 		-HERE, WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE.
-
+	
+	TODO:
 	scanNext
 		-WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE
 

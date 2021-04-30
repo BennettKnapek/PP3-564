@@ -117,7 +117,6 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 			PageId lastPageId, nextPageId;
 			bufMgr-> allocPage(file, lastPageId, lastPage);
 			bufMgr-> allocPage(file, nextPageId, nextPage);
-      
 			LeafNodeInt* lastNode = (LeafNodeInt*) lastPage;
 			LeafNodeInt* nextNode = (LeafNodeInt*) nextPage;
 			leafNode = nextNode;
@@ -125,8 +124,7 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 			currentNode->pageNoArray[0] = lastPageId;
 			currentNode->pageNoArray[1] = nextPageId;
 			lastNode->rightSibPageNo = nextPageId;
-      
-			BufferUnPinPage(lastPageId, true);
+	  		this->bufMgr->unPinPage(this->file, lastPageId, true);
 			stack.push(nextPageId);
 		}
 
@@ -142,18 +140,18 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
    
 	}
 
-	if (!insertKeyIntoLeaf(leafNode, currentKey, rid)) {
-		PageId newPageId = splitLeaf(leafNode, currentKey, rid);
-		BufferUnPinPage(stack.top(), true);
+	if (!insertKeyLeafNode(leafNode, currentKey, rid)) {
+		PageId newPageId = splitLeafNode(leafNode, currentKey, rid);
+		this->bufMgr->unPinPage(this->file, stack.top(), true);
 		stack.pop();
 		PageId currentPageId = stack.top();
 		bufMgr->readPage(file, currentPageId, currentPage);
-		BufferUnPinPage(currentPageId, true);
+		this->bufMgr->unPinPage(this->file, currentPageId, true);
 		currentNode = (NonLeafNodeInt*) currentPage;
 
-		while (!insertKeyIntoNonLeaf(currentNode, currentKey, newPageId)) {
-			newPageId = splitNonLeaf(currentNode, currentKey, newPageId);
-			BufferUnPinPage(currentPageId, true);
+		while (!insertKeyInternalNode(currentNode, currentKey, newPageId)) {
+			newPageId = splitInternalNode(currentNode, currentKey, newPageId);
+			this->bufMgr->unPinPage(this->file, currentPageId, true);
 			stack.pop();
 			if (stack.empty()){
 				break;
@@ -162,25 +160,25 @@ void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 			bufMgr->readPage(file, currentPageId, currentPage);
 			currentNode = (NonLeafNodeInt*) currentPage;
 		}
-		BufferUnPinPage(currentPageId, true);
+		this->bufMgr->unPinPage(this->file, currentPageId, true);
 
 		if (stack.empty()) {
 			Page* rootPage;
 			PageId rootPageId;
-			bufMgr->allocPage(file, rootPageId, rootPage);
+			this->bufMgr->allocPage(file, rootPageId, rootPage);
 			NonLeafNodeInt* root = (NonLeafNodeInt*) rootPage;
 			root->level = 0;
 			root->keyArray[0] = currentKey;
 			root->pageNoArray[0] = currentPageId;
 			root->pageNoArray[1] = newPageId;
 			rootPageNum = rootPageId;
-			BufferUnPinPage(newPageId, true);
-			BufferUnPinPage(rootPageId, true);
+			this->bufMgr->unPinPage(this->file, newPageId, true);
+			this->bufMgr->unPinPage(this->file, rootPageId, true);
 		}
-	} //end big if
+	}
  
 	while (!stack.empty()) {
-		BufferUnPinPage(stack.top(), true);
+		this->bufMgr->unPinPage(this->file, stack.top(), true);
 		stack.pop();
 	}
 }
@@ -204,7 +202,7 @@ void BTreeIndex::startScan(const void* lowValParm,
   }
   this->lowOp = lowOpParm;
   this->highOp = highOpParm;
-  this->nextEntry = findNextEntry(rootPageNum);
+  this->nextEntry = getNextEntry(rootPageNum);
 }
 
 void BTreeIndex::scanNext(RecordId& outRid) 
@@ -264,21 +262,21 @@ void BTreeIndex::endScan()
 // These need to be changed still
 
 //TODO
-const int BTreeIndex::findNextEntry(PageId pageNum) {
-	currentPageNum = pageNum;
-	bufMgr->readPage(file, currentPageNum, currentPageData);
-	NonLeafNodeInt* currentNode = (NonLeafNodeInt*) currentPageData;
+int BTreeIndex::getNextEntry(PageId pageNum) {
+	this->currentPageNum = pageNum;
+	this->bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
+	NonLeafNodeInt* currentNode = (NonLeafNodeInt*) this->currentPageData;
 	int i = 0;
 	for (; currentNode->pageNoArray[i+1] != 0 && i < INTARRAYNONLEAFSIZE && currentNode->keyArray[i] <= lowValInt; i++);
 
 	if (currentNode->level == 1) {
-		BufferUnPinPage(currentPageNum, false);
-		currentPageNum = currentNode->pageNoArray[i];
-		bufMgr->readPage(file, currentPageNum, currentPageData);
-		LeafNodeInt* currentNode = (LeafNodeInt*) currentPageData;
+		this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+		this->currentPageNum = currentNode->pageNoArray[i];
+		bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
+		LeafNodeInt* currentNode = (LeafNodeInt*) this->currentPageData;
 
 		int left = 0;
-    int right = INTARRAYLEAFSIZE - 1;
+    	int right = INTARRAYLEAFSIZE - 1;
 		
 		int j = 0;
 		for (j = left; j <= right; j++)
@@ -290,12 +288,12 @@ const int BTreeIndex::findNextEntry(PageId pageNum) {
 		return j;
 	}
 
-	BufferUnPinPage(currentPageNum, false);
-	return findNextEntry(currentNode->pageNoArray[i]);
+	this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
+	return getNextEntry(currentNode->pageNoArray[i]);
 }
 
 //TODO
-const bool BTreeIndex::insertKeyIntoLeaf(LeafNodeInt *node, int key, const RecordId rid) {
+bool BTreeIndex::insertKeyLeafNode(LeafNodeInt *node, int key, const RecordId rid) {
 	if (node->ridArray[INTARRAYLEAFSIZE - 1].page_number != 0) {
 		return false;
   }
@@ -316,7 +314,7 @@ const bool BTreeIndex::insertKeyIntoLeaf(LeafNodeInt *node, int key, const Recor
 }
 
 //TODO
-const bool BTreeIndex::insertKeyIntoNonLeaf(NonLeafNodeInt* node, int key, PageId pageId) {
+bool BTreeIndex::insertKeyInternalNode(NonLeafNodeInt* node, int key, PageId pageId) {
 	if (node->pageNoArray[INTARRAYNONLEAFSIZE] != 0)
 		return false;
 
@@ -336,7 +334,7 @@ const bool BTreeIndex::insertKeyIntoNonLeaf(NonLeafNodeInt* node, int key, PageI
 }
 
 //TODO
-const PageId BTreeIndex::splitLeaf(LeafNodeInt *lastNode, int& key, const RecordId rid) {
+PageId BTreeIndex::splitLeafNode(LeafNodeInt *lastNode, int& key, const RecordId rid) {
 	Page* nextPage;
 	PageId nextPageId;
 	bufMgr->allocPage(file, nextPageId, nextPage);
@@ -355,17 +353,17 @@ const PageId BTreeIndex::splitLeaf(LeafNodeInt *lastNode, int& key, const Record
 	lastNode->rightSibPageNo = nextPageId;
 
 	if (key >= nextNode->keyArray[0]){
-		insertKeyIntoLeaf(nextNode, key, rid);
+		insertKeyLeafNode(nextNode, key, rid);
 	}else{
-		insertKeyIntoLeaf(lastNode, key, rid);
+		insertKeyLeafNode(lastNode, key, rid);
   }
 	key = nextNode->keyArray[0];
-	BufferUnPinPage(nextPageId, true);
+	this->bufMgr->unPinPage(this->file, nextPageId, true);
 	return nextPageId;
 }
 
 //TODO
-const PageId BTreeIndex::splitNonLeaf(NonLeafNodeInt* node, int &key, const PageId pageId) {
+PageId BTreeIndex::splitInternalNode(NonLeafNodeInt* node, int &key, const PageId pageId) {
 	Page* newPage;
 	PageId newPageId;
 	bufMgr->allocPage(file, newPageId, newPage);
@@ -411,7 +409,7 @@ const PageId BTreeIndex::splitNonLeaf(NonLeafNodeInt* node, int &key, const Page
 
 	newNode->level = node->level;
 	key = keyTempArray[center];
-	BufferUnPinPage(newPageId, true);
+	this->bufMgr->unPinPage(file, newPageId, true);
 	return newPageId;
 }
 

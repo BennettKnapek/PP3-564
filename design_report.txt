@@ -58,13 +58,17 @@ Functions not implemented:
 
 		Maybe add more here	
 
-	TODO:
 	insertEntry
-		-Would need functions to split both internal and external nodes
-		-Would need functions to insert into internal and external nodes
-		-HERE, WE NEED TO DESCRIBE WHAT WE WOULD HAVE DONE.
+		To correctly complete the insertEntry function, we will need a few helper methods that split internal
+		nodes and leaf nodes in order to insert. If there are overflows in a leaf node, split the node into two nodes. 
+		The first node will contain ceil((n-1)/2) values and the second will contain the remaining values. The smallest
+		key from the second node will then go to the parent node. If there are overflows in an internal node, split that 
+		node into two nodes. The first node will contain ceil(n/2)-1 values. Make the smallest key as parent. And then
+		second node will contain the remaining keys. Because the indexed attribute is a single data type (integer), thats
+		all we have to compare as we propagate through the branches. Make sure that when the tree is created, the the header
+		page for the tree is storing metadata. 
+
 	
-	TODO:
 	scanNext
 		First check if the scanExecuting is set to true and if not throw a ScanNotInitializedException.
 		We will loop through the entries until we have found one that matches the scan. The way we iterate
